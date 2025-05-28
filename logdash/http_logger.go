@@ -2,7 +2,6 @@ package logdash
 
 import (
 	"fmt"
-	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -17,10 +16,10 @@ type httpLogger struct {
 
 // logEntry represents a single log entry to be sent to the server.
 type logEntry struct {
-	Timestamp      string `json:"timestamp"`
+	CreatedAt      string `json:"createdAt"`
 	Level          string `json:"level"`
 	Message        string `json:"message"`
-	SequenceNumber int64  `json:"sequence_number"`
+	SequenceNumber int64  `json:"sequenceNumber"`
 }
 
 // newHTTPLogger creates a new HTTPLogger instance.
@@ -51,8 +50,8 @@ func newHTTPLogger(serverURL string, apiKey string, internalLogger *Logger, buff
 // syncLog implements the syncLogger interface.
 func (l *httpLogger) syncLog(timestamp time.Time, level logLevel, message string) {
 	entry := logEntry{
-		Timestamp:      timestamp.UTC().Format(time.RFC3339Nano),
-		Level:          strings.ToUpper(string(level)),
+		CreatedAt:      timestamp.UTC().Format(time.RFC3339Nano),
+		Level:          string(level),
 		Message:        message,
 		SequenceNumber: l.sequenceNumber.Add(1),
 	}
