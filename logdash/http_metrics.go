@@ -2,6 +2,7 @@ package logdash
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -31,7 +32,7 @@ func newHTTPMetrics(serverURL string, apiKey string, internalLogger *Logger, buf
 	metrics.processor = newAsyncProcessor(
 		bufferSize,
 		func(entry metricEntry) error {
-			return metrics.client.sendData("/metrics", entry)
+			return metrics.client.sendData("/metrics", http.MethodPut, entry)
 		},
 		func(err error) {
 			if err == errChannelOverflow {

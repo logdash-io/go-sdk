@@ -2,6 +2,7 @@ package logdash
 
 import (
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 )
@@ -33,7 +34,7 @@ func newHTTPLogger(serverURL string, apiKey string, internalLogger *Logger, buff
 	logger.processor = newAsyncProcessor(
 		bufferSize,
 		func(entry logEntry) error {
-			return logger.client.sendData("/logs", entry)
+			return logger.client.sendData("/logs", http.MethodPost, entry)
 		},
 		func(err error) {
 			if err == errChannelOverflow {
