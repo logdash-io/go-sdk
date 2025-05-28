@@ -1,5 +1,11 @@
 package logdash
 
+import (
+	"context"
+
+	"golang.org/x/sync/errgroup"
+)
+
 type (
 	// Logdash is the main object exposing the Logdash API.
 	Logdash struct {
@@ -131,4 +137,22 @@ func (ld *Logdash) setupMetrics(host string, apiKey string, asyncSettings AsyncS
 	}
 
 	ld.Metrics = newVerboseLogMetricsWrapper(ld.internalLogger, innerMetrics)
+}
+
+func (ld *Logdash) Shutdown(ctx context.Context) error {
+	errg, _ := errgroup.WithContext(ctx)
+	errg.Go(func() error {
+		return ld.Logger.Shutdown(ctx)
+	})
+	errg.Go(func() error {
+		return ld.Metrics.Shutdown(ctx)
+	})
+	return errg.Wait()
+}
+
+func (ld *Logdash) Close() error {
+	errg, _ := errgroup.WithContext(context.Background())
+	errg.Go(ld.Logger.Close)
+	errg.Go(ld.Metrics.Close)
+	return errg.Wait()
 }

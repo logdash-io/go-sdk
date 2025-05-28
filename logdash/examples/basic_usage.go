@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/logdash-io/go-sdk/logdash"
@@ -30,7 +31,7 @@ func main() {
 	logger.Verbose("Verbose details")
 
 	// Track metrics
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		// Set absolute values
 		metrics.Set("active_users", float64(100+i*10))
 
@@ -42,4 +43,12 @@ func main() {
 		logger.InfoF("Iteration %d/5 completed", i+1)
 		time.Sleep(1 * time.Second)
 	}
+
+	// Go specific: Shutdown method wait for flushing all enqueued logs before closing application
+	for i := range 10 {
+		logger.InfoF("Fast iteration %d/10 completed", i+1)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	ld.Shutdown(ctx)
 }

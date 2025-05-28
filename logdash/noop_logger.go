@@ -3,7 +3,9 @@ package logdash
 import "time"
 
 // noopLogger implements syncLogger interface with no-op operations.
-type noopLogger struct{}
+type noopLogger struct {
+	noopResourceManager
+}
 
 // newNoopLogger creates a new NoopLogger instance.
 func newNoopLogger() *noopLogger {

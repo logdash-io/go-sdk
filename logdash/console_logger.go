@@ -11,6 +11,7 @@ import (
 
 // consoleLogger implements syncLogger interface for console output.
 type consoleLogger struct {
+	noopResourceManager
 	// mu is used to ensure the log message is printed as a single line
 	mu sync.Mutex
 }

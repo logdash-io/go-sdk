@@ -1,7 +1,9 @@
 package logdash
 
 // noopMetrics implements Metrics interface with no-op operations.
-type noopMetrics struct{}
+type noopMetrics struct {
+	noopResourceManager
+}
 
 // Set sets a metric to an absolute value (no-op).
 func (m noopMetrics) Set(name string, value float64) {}

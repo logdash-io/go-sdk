@@ -1,6 +1,7 @@
 package logdash
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -60,9 +61,14 @@ func (l *httpLogger) syncLog(timestamp time.Time, level logLevel, message string
 	l.processor.send(entry)
 }
 
-// Close stops the background worker and closes the logger
-func (l *httpLogger) Close() {
-	l.processor.Close()
+// Close stops the background worker and closes the logger.
+func (l *httpLogger) Close() error {
+	return l.processor.Close()
+}
+
+// Shutdown stops the background worker and closes the logger.
+func (l *httpLogger) Shutdown(ctx context.Context) error {
+	return l.processor.Shutdown(ctx)
 }
 
 // SetOverflowPolicy sets the overflow policy for the logger

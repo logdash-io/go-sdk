@@ -1,6 +1,7 @@
 package logdash
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -67,12 +68,17 @@ func (m *httpMetrics) Mutate(name string, value float64) {
 	m.sendOperation(name, value, "change")
 }
 
-// Close stops the background worker and closes the metrics
-func (m *httpMetrics) Close() {
-	m.processor.Close()
+// Close stops the background worker and closes the metrics.
+func (m *httpMetrics) Close() error {
+	return m.processor.Close()
 }
 
-// SetOverflowPolicy sets the overflow policy for the metrics
+// Shutdown stops the background worker and closes the metrics.
+func (m *httpMetrics) Shutdown(ctx context.Context) error {
+	return m.processor.Shutdown(ctx)
+}
+
+// SetOverflowPolicy sets the overflow policy for the metrics.
 func (m *httpMetrics) SetOverflowPolicy(policy OverflowPolicy) {
 	m.processor.SetOverflowPolicy(policy)
 }

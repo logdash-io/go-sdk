@@ -1,6 +1,8 @@
 package logdash
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -8,6 +10,7 @@ import (
 
 // syncLogger defines the internal interface for synchronous logging.
 type syncLogger interface {
+	ResourceManager
 	// syncLog logs a message with the given timestamp, level and message.
 	syncLog(timestamp time.Time, level logLevel, message string)
 }
@@ -123,4 +126,26 @@ func formatMessage(args ...any) string {
 		strArgs[i] = fmt.Sprint(arg)
 	}
 	return strings.Join(strArgs, " ")
+}
+
+func (l *Logger) Shutdown(ctx context.Context) error {
+	var errs []error
+	for _, logger := range l.loggers {
+		err := logger.Shutdown(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (l *Logger) Close() error {
+	var errs []error
+	for _, logger := range l.loggers {
+		err := logger.Close()
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }

@@ -17,7 +17,12 @@ go get github.com/logdash-io/go-sdk/logdash
 ## Logging
 
 ```go
-import 	"github.com/logdash-io/go-sdk/logdash"
+import (
+	"context"
+	"time"
+
+	"github.com/logdash-io/go-sdk/logdash"
+)
 
 func main() {
     // Initialize with your API key
@@ -36,6 +41,12 @@ func main() {
     // Go specific: all logging methods has ...F() counterpart
     // like fmt.PrinttF for fmt.Print
     logger.InfoF("Processing %v of %v item", i, items)
+
+	// Go specific: Shutdown method wait for flushing 
+    // all enqueued logs before closing application
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	ld.Shutdown(ctx)
 }
 ```
 
