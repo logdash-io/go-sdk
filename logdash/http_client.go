@@ -1,35 +1,27 @@
 package logdash
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
-
-	"github.com/hashicorp/go-retryablehttp"
 )
 
 // httpClient is a common HTTP client for sending data to the server.
 type httpClient struct {
-	client    *retryablehttp.Client
+	client    *http.Client
 	serverURL string
 	apiKey    string
 }
 
 // newHTTPClient creates a new HTTP client instance.
 func newHTTPClient(serverURL string, apiKey string) *httpClient {
-	retryableClient := retryablehttp.NewClient()
-	retryableClient.HTTPClient = &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	retryableClient.RetryMax = 3
-	retryableClient.RetryWaitMin = 1 * time.Second
-	retryableClient.RetryWaitMax = 30 * time.Second
-	retryableClient.Backoff = retryablehttp.DefaultBackoff
-
 	return &httpClient{
-		client:    retryableClient,
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 		serverURL: serverURL,
 		apiKey:    apiKey,
 	}
@@ -42,7 +34,7 @@ func (c *httpClient) sendData(endpoint string, method string, data any) error {
 		return fmt.Errorf("failed to marshal: %w", err)
 	}
 
-	req, err := retryablehttp.NewRequest(method, c.serverURL+endpoint, jsonData)
+	req, err := http.NewRequest(method, c.serverURL+endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
