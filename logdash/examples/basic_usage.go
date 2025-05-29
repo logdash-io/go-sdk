@@ -11,7 +11,7 @@ func main() {
 	// Initialize logdash with your API key
 	// For testing without an API key, logs will only be printed locally
 	ld := logdash.New(logdash.LogdashConfig{
-		Host:    "http://localhost:8080",
+		Host:    "https://api.logdash.io",
 		APIKey:  "your-api-key", // Replace with your actual API key
 		Verbose: true,           // Enable verbose mode for development
 	})
