@@ -49,10 +49,10 @@ func (c *httpClient) sendData(endpoint string, method string, data any) error {
 	defer resp.Body.Close()
 
 	// Allow reuse connection
-	_, _ = io.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("server returned error status: %d", resp.StatusCode)
+		return fmt.Errorf("server returned error status: %d, body: %s", resp.StatusCode, string(respBody))
 	}
 
 	return nil
