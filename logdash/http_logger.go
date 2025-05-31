@@ -37,7 +37,7 @@ func newHTTPLogger(serverURL string, apiKey string, internalLogger *Logger, buff
 		func(entry logEntry) error {
 			return logger.client.sendData("/logs", http.MethodPost, entry)
 		},
-		func(err error) {
+		func(entry logEntry, err error) {
 			if err == errChannelOverflow {
 				logger.internalLogger.Error("Log dropped due to channel overflow")
 			} else {

@@ -13,14 +13,14 @@ type asyncProcessor[T any] struct {
 	processChanMu  sync.RWMutex
 	overflowPolicy OverflowPolicy
 	processFunc    func(T) error
-	errorHandler   func(error)
+	errorHandler   func(T, error)
 }
 
 // errChannelOverflow is returned when the channel is full and the overflow policy is set to drop.
 var errChannelOverflow = errors.New("channel overflow")
 
 // newAsyncProcessor creates a new async processor instance.
-func newAsyncProcessor[T any](bufferSize int, processFunc func(T) error, errorHandler func(error)) *asyncProcessor[T] {
+func newAsyncProcessor[T any](bufferSize int, processFunc func(T) error, errorHandler func(T, error)) *asyncProcessor[T] {
 	processor := &asyncProcessor[T]{
 		processChan:    make(chan T, bufferSize),
 		stoppedChan:    make(chan struct{}),
@@ -40,7 +40,7 @@ func (p *asyncProcessor[T]) process(ch chan T) {
 	defer close(p.stoppedChan)
 	for item := range ch {
 		if err := p.processFunc(item); err != nil {
-			p.errorHandler(err)
+			p.errorHandler(item, err)
 		}
 	}
 }
@@ -55,7 +55,7 @@ func (p *asyncProcessor[T]) send(item T) {
 	default:
 		// Channel is full
 		if p.overflowPolicy == OverflowPolicyDrop {
-			p.errorHandler(errChannelOverflow)
+			p.errorHandler(item, errChannelOverflow)
 			return
 		}
 		// Block until there's space in the channel

@@ -48,10 +48,12 @@ type (
 	}
 
 	AsyncSettings struct {
-		// BufferSize is the size of the buffer for the async logger.
+		// BufferSize is the size of the buffer for the async queue.
 		BufferSize int
 
 		// OverflowPolicy defines how to handle log overflow.
+		//
+		// This options is ignored for metrics.
 		OverflowPolicy OverflowPolicy
 	}
 
@@ -129,7 +131,6 @@ func (ld *Logdash) setupMetrics(host string, apiKey string, asyncSettings AsyncS
 	if apiKey != "" {
 		ld.internalLogger.VerboseF("Creating Metrics with host %s", host)
 		httpMetrics := newHTTPMetrics(host, apiKey, ld.internalLogger, asyncSettings.BufferSize)
-		httpMetrics.SetOverflowPolicy(asyncSettings.OverflowPolicy)
 		innerMetrics = httpMetrics
 	} else {
 		ld.internalLogger.Warn("No API key provided, using noop metrics")

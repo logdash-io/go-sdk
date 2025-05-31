@@ -35,8 +35,9 @@ func newHTTPMetrics(serverURL string, apiKey string, internalLogger *Logger, buf
 		func(entry metricEntry) error {
 			return metrics.client.sendData("/metrics", http.MethodPut, entry)
 		},
-		func(err error) {
+		func(entry metricEntry, err error) {
 			if err == errChannelOverflow {
+				// TODO: accumulate metrics and send them later
 				metrics.internalLogger.Error("Metric dropped due to channel overflow")
 			} else {
 				metrics.internalLogger.Error(fmt.Sprintf("Failed to send metric: %v", err))
@@ -76,9 +77,4 @@ func (m *httpMetrics) Close() error {
 // Shutdown stops the background worker and closes the metrics.
 func (m *httpMetrics) Shutdown(ctx context.Context) error {
 	return m.processor.Shutdown(ctx)
-}
-
-// SetOverflowPolicy sets the overflow policy for the metrics.
-func (m *httpMetrics) SetOverflowPolicy(policy OverflowPolicy) {
-	m.processor.SetOverflowPolicy(policy)
 }
