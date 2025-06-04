@@ -42,8 +42,8 @@ func main() {
     // like fmt.PrinttF for fmt.Print
     logger.InfoF("Processing %v of %v item", i, items)
 
-	// Go specific: Shutdown method wait for flushing 
-    // all enqueued logs before closing application
+    // Go specific: Shutdown method wait for flushing 
+    // all enqueued logs and metrics before closing application
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	ld.Shutdown(ctx)
