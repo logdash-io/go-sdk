@@ -1,6 +1,6 @@
 # logdash - Go SDK
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/logdash-io/go-sdk.svg)](https://pkg.go.dev/github.com/logdash-io/go-sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/logdash-io/go-sdk/logdash.svg)](https://pkg.go.dev/github.com/logdash-io/go-sdk/logdash)
 
 Logdash is a zero-config observability platform. This package serves as a Go interface to use it.
 
