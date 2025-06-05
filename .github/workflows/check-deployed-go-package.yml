@@ -21,3 +21,20 @@ jobs:
         env:
           LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
         run: ./check-deployed-package/run.sh
+
+  test:
+    name: Run Go Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run tests
+        working-directory: logdash
+        run: go test -v ./...
