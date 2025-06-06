@@ -61,7 +61,7 @@ func assertRequestAndBody(t *testing.T, rb requestAndBody, expectedMethod, expec
 			continue
 		}
 
-		assert.Equal(t, expectedValue, actualBody[key], "body field %s mismatch", key)
+		assert.Equal(t, expectedValue, actualBody[key], "body field '%s' mismatch", key)
 	}
 
 	return actualBody
@@ -108,15 +108,25 @@ func TestLogdashLoggerInfoOneLog(t *testing.T) {
 	})
 }
 
-func TestLogdashMetricSetMetric(t *testing.T) {
-	t.Run("should send metric to the server", func(t *testing.T) {
+func TestLogdashShutdownImmediatelly(t *testing.T) {
+	ld := logdash.New(logdash.LogdashConfig{
+		Host:    "http://localhost:8080",
+		APIKey:  "test-api-key",
+		Verbose: true,
+	})
+
+	err := ld.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestLogdashMetricMetric(t *testing.T) {
+	t.Run("should send one set metric command to the server", func(t *testing.T) {
 		// GIVEN
 		requestsCollector := &requestsCollector{}
 
 		httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer r.Body.Close()
 			w.WriteHeader(http.StatusOK)
-
 			requestsCollector.add(t, r)
 		}))
 
@@ -131,20 +141,152 @@ func TestLogdashMetricSetMetric(t *testing.T) {
 
 		beforeMetricSent := time.Now()
 		ld.Metrics.Set("test-metric", 42)
+		ld.Metrics.Mutate("test-metric", 1)
 		err := ld.Shutdown(context.Background())
 
 		// THEN
 		assert.NoError(t, err)
 
-		assert.Len(t, requestsCollector.requests, 1)
-		r := requestsCollector.requests[0]
+		assert.Len(t, requestsCollector.requests, 2)
 
-		expectedBody := map[string]any{
-			"name":      "test-metric",
-			"value":     float64(42),
-			"operation": "set",
-			"timestamp": nil, // Will be validated as timestamp
+		expectedBody := []map[string]any{
+			{
+				"name":      "test-metric",
+				"value":     float64(42),
+				"operation": "set",
+				"timestamp": nil, // Will be validated as timestamp
+			},
+			{
+				"name":      "test-metric",
+				"value":     float64(1),
+				"operation": "change",
+				"timestamp": nil, // Will be validated as timestamp
+			},
 		}
-		assertRequestAndBody(t, r, http.MethodPut, "/metrics", "test-api-key", expectedBody, beforeMetricSent)
+		for i, r := range requestsCollector.requests {
+			assertRequestAndBody(t, r, http.MethodPut, "/metrics", "test-api-key", expectedBody[i], beforeMetricSent)
+		}
+	})
+
+	t.Run("should send accumulated metric command to the server", func(t *testing.T) {
+		t.Run("when metric is set multiple times", func(t *testing.T) {
+			// GIVEN
+			requestsCollector := &requestsCollector{}
+
+			kickServer := make(chan struct{})
+
+			httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				<-kickServer
+				defer r.Body.Close()
+				w.WriteHeader(http.StatusOK)
+				requestsCollector.add(t, r)
+			}))
+
+			defer httpServer.Close()
+
+			// WHEN
+			ld := logdash.New(logdash.LogdashConfig{
+				Host:    httpServer.URL,
+				APIKey:  "test-api-key",
+				Verbose: true,
+			})
+
+			beforeMetricSent := time.Now()
+			// first request is always sent immediately in test environment
+			// because test HTTP server accepts connection immediately
+			// and only then we can delay consecutive requests via kickServer channel
+			ld.Metrics.Set("test-metric", 42)
+
+			// this set/changes wont be sent because following set will override it
+			ld.Metrics.Set("test-metric", 100)
+			for range 1000 {
+				ld.Metrics.Mutate("test-metric", 1)
+			}
+			// this set/changes will be sent
+			ld.Metrics.Set("test-metric", 1)
+			for range 10 {
+				ld.Metrics.Mutate("test-metric", 1)
+			}
+			close(kickServer)
+			err := ld.Shutdown(context.Background())
+
+			// THEN
+			assert.NoError(t, err)
+
+			assert.Len(t, requestsCollector.requests, 2)
+
+			expectedBody := []map[string]any{
+				{
+					"name":      "test-metric",
+					"value":     float64(42),
+					"operation": "set",
+					"timestamp": nil, // Will be validated as timestamp
+				},
+				{
+					"name":      "test-metric",
+					"value":     float64(11),
+					"operation": "set",
+					"timestamp": nil, // Will be validated as timestamp
+				},
+			}
+			for i, r := range requestsCollector.requests {
+				assertRequestAndBody(t, r, http.MethodPut, "/metrics", "test-api-key", expectedBody[i], beforeMetricSent)
+			}
+		})
+		t.Run("when metric is mutated multiple times", func(t *testing.T) {
+			// GIVEN
+			requestsCollector := &requestsCollector{}
+
+			kickServer := make(chan struct{})
+
+			httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				<-kickServer
+				defer r.Body.Close()
+				w.WriteHeader(http.StatusOK)
+				requestsCollector.add(t, r)
+			}))
+
+			defer httpServer.Close()
+
+			// WHEN
+			ld := logdash.New(logdash.LogdashConfig{
+				Host:    httpServer.URL,
+				APIKey:  "test-api-key",
+				Verbose: true,
+			})
+
+			beforeMetricSent := time.Now()
+			// first request is always sent immediately in test environment
+			// because test HTTP server accepts connection immediately
+			// and only then we can delay consecutive requests via kickServer channel
+			for range 1000 {
+				ld.Metrics.Mutate("test-metric", 1)
+			}
+			close(kickServer)
+			err := ld.Shutdown(context.Background())
+
+			// THEN
+			assert.NoError(t, err)
+
+			assert.Len(t, requestsCollector.requests, 2)
+
+			expectedBody := []map[string]any{
+				{
+					"name":      "test-metric",
+					"value":     float64(1),
+					"operation": "change",
+					"timestamp": nil, // Will be validated as timestamp
+				},
+				{
+					"name":      "test-metric",
+					"value":     float64(999),
+					"operation": "change",
+					"timestamp": nil, // Will be validated as timestamp
+				},
+			}
+			for i, r := range requestsCollector.requests {
+				assertRequestAndBody(t, r, http.MethodPut, "/metrics", "test-api-key", expectedBody[i], beforeMetricSent)
+			}
+		})
 	})
 }

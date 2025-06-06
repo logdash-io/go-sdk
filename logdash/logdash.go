@@ -40,11 +40,6 @@ type (
 		//
 		// If not provided, the copy of [DefaultAsyncSettings] will be used.
 		LogAsyncSettings *AsyncSettings
-
-		// MetricsAsyncSettings is the settings for the async metrics.
-		//
-		// If not provided, the copy of [DefaultAsyncSettings] will be used.
-		MetricsAsyncSettings *AsyncSettings
 	}
 
 	AsyncSettings struct {
@@ -88,16 +83,11 @@ func New(config LogdashConfig) *Logdash {
 		logAsyncSettings = *config.LogAsyncSettings
 	}
 
-	metricsAsyncSettings := DefaultAsyncSettings
-	if config.MetricsAsyncSettings != nil {
-		metricsAsyncSettings = *config.MetricsAsyncSettings
-	}
-
 	ld := &Logdash{}
 
 	ld.setupInternalLogger(config.Verbose)
 	ld.setupLogger(config.Host, config.APIKey, logAsyncSettings)
-	ld.setupMetrics(config.Host, config.APIKey, metricsAsyncSettings)
+	ld.setupMetrics(config.Host, config.APIKey)
 
 	return ld
 }
@@ -125,12 +115,12 @@ func (ld *Logdash) setupLogger(host string, apiKey string, asyncSettings AsyncSe
 	}
 }
 
-func (ld *Logdash) setupMetrics(host string, apiKey string, asyncSettings AsyncSettings) {
+func (ld *Logdash) setupMetrics(host string, apiKey string) {
 	var innerMetrics Metrics
 
 	if apiKey != "" {
 		ld.internalLogger.VerboseF("Creating Metrics with host %s", host)
-		httpMetrics := newHTTPMetrics(host, apiKey, ld.internalLogger, asyncSettings.BufferSize)
+		httpMetrics := newHTTPMetrics(host, apiKey, ld.internalLogger)
 		innerMetrics = httpMetrics
 	} else {
 		ld.internalLogger.Warn("No API key provided, using noop metrics")
