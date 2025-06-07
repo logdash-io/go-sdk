@@ -5,23 +5,39 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 // httpClient is a common HTTP client for sending data to the server.
 type httpClient struct {
-	client    *http.Client
+	client    *retryablehttp.Client
 	serverURL string
 	apiKey    string
 }
 
+type retryLogger struct {
+	internalLogger *Logger
+}
+
+func (l *retryLogger) Printf(format string, v ...interface{}) {
+	l.internalLogger.VerboseF(format, v...)
+}
+
 // newHTTPClient creates a new HTTP client instance.
-func newHTTPClient(serverURL string, apiKey string) *httpClient {
+func newHTTPClient(serverURL string, apiKey string, internalLogger *Logger) *httpClient {
+	retryhttpClient := retryablehttp.NewClient()
+	retryhttpClient.Logger = &retryLogger{
+		internalLogger: internalLogger,
+	}
+	retryhttpClient.RetryMax = 3
+	retryhttpClient.RetryWaitMin = 1 * time.Second
+	retryhttpClient.RetryWaitMax = 30 * time.Second
+	retryhttpClient.HTTPClient.Timeout = 5 * time.Second
+
 	return &httpClient{
-		client: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+		client:    retryhttpClient,
 		serverURL: serverURL,
 		apiKey:    apiKey,
 	}
@@ -34,7 +50,7 @@ func (c *httpClient) sendData(endpoint string, method string, data any) error {
 		return fmt.Errorf("failed to marshal: %w", err)
 	}
 
-	req, err := http.NewRequest(method, c.serverURL+endpoint, bytes.NewBuffer(jsonData))
+	req, err := retryablehttp.NewRequest(method, c.serverURL+endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
