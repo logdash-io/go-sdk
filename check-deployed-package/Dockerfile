@@ -10,9 +10,6 @@ COPY check-deployed-package/go.sum* ./
 # Copy the entire logdash SDK source code
 COPY logdash/ /go/src/github.com/logdash-io/go-sdk/logdash/
 
-# Replace the remote dependency with local path
-RUN go mod edit -replace github.com/logdash-io/go-sdk/logdash=/go/src/github.com/logdash-io/go-sdk/logdash
-
 # Copy source code
 COPY check-deployed-package/check.go ./
 

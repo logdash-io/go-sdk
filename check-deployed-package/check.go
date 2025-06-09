@@ -66,11 +66,8 @@ func main() {
 	metrics.Set("users", metricsSeed)
 	metrics.Mutate("users", 1)
 
-	// Wait to ensure data is sent (equivalent to Python's time.sleep(2))
-	time.Sleep(2 * time.Second)
-
-	// Shutdown properly
+	// Shutdown properly, wait to ensure data is sent
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	ld.Shutdown(ctx)
-} 
+}
