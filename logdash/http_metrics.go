@@ -46,7 +46,7 @@ const (
 // newHTTPMetrics creates a new HTTPMetrics instance.
 func newHTTPMetrics(serverURL string, apiKey string, internalLogger *Logger) *httpMetrics {
 	metrics := &httpMetrics{
-		client:                 newHTTPClient(serverURL, apiKey),
+		client:                 newHTTPClient(serverURL, apiKey, internalLogger),
 		internalLogger:         internalLogger,
 		sendingAccumulatedChan: make(chan metricEntry),
 		stoppedChan:            make(chan struct{}),
