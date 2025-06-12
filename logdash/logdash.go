@@ -2,6 +2,7 @@ package logdash
 
 import (
 	"context"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -24,32 +25,20 @@ type (
 		internalLogger *Logger
 	}
 
-	// LogdashConfig is the configuration for the Logdash.
-	LogdashConfig struct {
-		// Host is the host of the Logdash server.
-		Host string
+	// Option is a function that configures a Logdash instance.
+	Option func(*options)
 
-		// APIKey is the API key for the Logdash server.
-		// If not provided, the Logdash will not send any logs nor metrics to the server.
-		APIKey string
-
-		// Verbose is a flag to enable internal logging.
-		Verbose bool
-
-		// LogAsyncSettings is the settings for the async logger.
-		//
-		// If not provided, the copy of [DefaultAsyncSettings] will be used.
-		LogAsyncSettings *AsyncSettings
-	}
-
-	AsyncSettings struct {
-		// BufferSize is the size of the buffer for the async queue.
-		BufferSize int
-
-		// OverflowPolicy defines how to handle log overflow.
-		//
-		// This options is ignored for metrics.
-		OverflowPolicy OverflowPolicy
+	// options contains all the configuration options for Logdash.
+	options struct {
+		host           string
+		apiKey         string
+		verbose        bool
+		bufferSize     int
+		overflowPolicy OverflowPolicy
+		httpTimeout    time.Duration
+		httpRetries    int
+		httpRetryMin   time.Duration
+		httpRetryMax   time.Duration
 	}
 
 	// OverflowPolicy defines how to handle log overflow.
@@ -57,54 +46,139 @@ type (
 )
 
 const (
-	// OverflowPolicyBlock blocks when channel is full.
-	OverflowPolicyBlock OverflowPolicy = iota
-	// OverflowPolicyDrop drops new logs when channel is full.
-	OverflowPolicyDrop
+	// OverflowPolicyDrop drops new logs when the internal buffer is full.
+	//
+	// This is the default behavior.
+	OverflowPolicyDrop OverflowPolicy = iota
+
+	// OverflowPolicyBlock blocks when the internal buffer is full.
+	//
+	// This is useful when you want to preserve logs even when the internal buffer is full.
+	OverflowPolicyBlock
 )
 
 var (
-	// DefaultAsyncSettings is the default settings for the async operations.
-	//
-	// BufferSize is set to 128 and OverflowPolicy is set to OverflowPolicyDrop.
-	DefaultAsyncSettings = AsyncSettings{
-		BufferSize:     128,
-		OverflowPolicy: OverflowPolicyDrop,
-	}
+	// DefaultBufferSize is the default size of the buffer for the async queue.
+	DefaultBufferSize = 128
 )
 
-func New(config LogdashConfig) *Logdash {
-	if config.Host == "" {
-		config.Host = "https://api.logdash.io"
+// WithHost sets the host for the Logdash server.
+func WithHost(host string) Option {
+	return func(o *options) {
+		o.host = host
+	}
+}
+
+// WithAPIKey sets the API key for the Logdash server.
+func WithAPIKey(apiKey string) Option {
+	return func(o *options) {
+		o.apiKey = apiKey
+	}
+}
+
+// WithVerbose enables verbose logging.
+//
+// This is useful for debugging, showing internal logs and changes in the metrics.
+func WithVerbose() Option {
+	return func(o *options) {
+		o.verbose = true
+	}
+}
+
+// WithBufferSize sets the size of the buffer for the async queue.
+func WithBufferSize(size int) Option {
+	return func(o *options) {
+		o.bufferSize = size
+	}
+}
+
+// WithOverflowPolicy sets how to handle log overflow.
+func WithOverflowPolicy(policy OverflowPolicy) Option {
+	return func(o *options) {
+		o.overflowPolicy = policy
+	}
+}
+
+// WithHTTPTimeout sets the timeout for HTTP requests.
+func WithHTTPTimeout(timeout time.Duration) Option {
+	return func(o *options) {
+		o.httpTimeout = timeout
+	}
+}
+
+// WithHTTPRetries sets the number of retries for HTTP requests.
+func WithHTTPRetries(retries int) Option {
+	return func(o *options) {
+		o.httpRetries = retries
+	}
+}
+
+// WithHTTPRetryMin sets the minimum duration for HTTP retries.
+func WithHTTPRetryMin(min time.Duration) Option {
+	return func(o *options) {
+		o.httpRetryMin = min
+	}
+}
+
+// WithHTTPRetryMax sets the maximum duration for HTTP retries.
+func WithHTTPRetryMax(max time.Duration) Option {
+	return func(o *options) {
+		o.httpRetryMax = max
+	}
+}
+
+// New creates a new Logdash instance with the given options.
+//
+// By default, the Logdash will use the Logdash API at https://api.logdash.io.
+//
+// If no API key is provided, the Logdash will not send any logs or metrics to the server.
+// Logging to the console is always enabled.
+//
+// The default buffer size is 128 (see: [DefaultBufferSize]).
+//
+// The default overflow policy is [OverflowPolicyDrop], to avoid blocking the logging thread.
+// For preserving logs in case of overflow, use [WithOverflowPolicy] to set [OverflowPolicyBlock].
+//
+// The default HTTP settings are:
+// - timeout: 5 seconds (see: [WithHTTPTimeout]).
+// - retries: 3 (see: [WithHTTPRetries]).
+// - retry minimum interval: 1 second (see: [WithHTTPRetryMin]).
+// - retry maximum interval: 30 seconds (see: [WithHTTPRetryMax]).
+func New(opts ...Option) *Logdash {
+	o := &options{
+		host:           "https://api.logdash.io",
+		bufferSize:     DefaultBufferSize,
+		overflowPolicy: OverflowPolicyDrop,
 	}
 
-	logAsyncSettings := DefaultAsyncSettings
-	if config.LogAsyncSettings != nil {
-		logAsyncSettings = *config.LogAsyncSettings
+	for _, opt := range opts {
+		opt(o)
 	}
 
 	ld := &Logdash{}
-
-	ld.setupInternalLogger(config.Verbose)
-	ld.setupLogger(config.Host, config.APIKey, logAsyncSettings)
-	ld.setupMetrics(config.Host, config.APIKey)
-
+	ld.setup(o)
 	return ld
 }
 
-func (ld *Logdash) setupInternalLogger(verbose bool) {
-	if verbose {
+func (ld *Logdash) setup(o *options) {
+	ld.setupInternalLogger(o)
+	ld.setupLogger(o)
+	ld.setupMetrics(o)
+}
+
+func (ld *Logdash) setupInternalLogger(o *options) {
+	if o.verbose {
 		ld.internalLogger = newLogger(newConsoleLogger())
 	} else {
 		ld.internalLogger = newLogger(newNoopLogger())
 	}
 }
 
-func (ld *Logdash) setupLogger(host string, apiKey string, asyncSettings AsyncSettings) {
-	if apiKey != "" {
-		ld.internalLogger.VerboseF("Creating Logger with host %s", host)
-		httpLogger := newHTTPLogger(host, apiKey, ld.internalLogger, asyncSettings.BufferSize)
-		httpLogger.SetOverflowPolicy(asyncSettings.OverflowPolicy)
+func (ld *Logdash) setupLogger(o *options) {
+	if o.apiKey != "" {
+		ld.internalLogger.VerboseF("Creating Logger with host %s", o.host)
+		httpLogger := newHTTPLogger(o, ld.internalLogger, o.bufferSize)
+		httpLogger.SetOverflowPolicy(o.overflowPolicy)
 		ld.Logger = newLogger(
 			newConsoleLogger(),
 			httpLogger,
@@ -115,12 +189,12 @@ func (ld *Logdash) setupLogger(host string, apiKey string, asyncSettings AsyncSe
 	}
 }
 
-func (ld *Logdash) setupMetrics(host string, apiKey string) {
+func (ld *Logdash) setupMetrics(o *options) {
 	var innerMetrics Metrics
 
-	if apiKey != "" {
-		ld.internalLogger.VerboseF("Creating Metrics with host %s", host)
-		httpMetrics := newHTTPMetrics(host, apiKey, ld.internalLogger)
+	if o.apiKey != "" {
+		ld.internalLogger.VerboseF("Creating Metrics with host %s", o.host)
+		httpMetrics := newHTTPMetrics(o, ld.internalLogger)
 		innerMetrics = httpMetrics
 	} else {
 		ld.internalLogger.Warn("No API key provided, using noop metrics")

@@ -82,11 +82,11 @@ func TestLogdashLoggerInfoOneLog(t *testing.T) {
 		defer httpServer.Close()
 
 		// WHEN
-		ld := logdash.New(logdash.LogdashConfig{
-			Host:    httpServer.URL,
-			APIKey:  "test-api-key",
-			Verbose: true,
-		})
+		ld := logdash.New(
+			logdash.WithHost(httpServer.URL),
+			logdash.WithAPIKey("test-api-key"),
+			logdash.WithVerbose(),
+		)
 
 		beforeLogSent := time.Now()
 		ld.Logger.Info("Hello, World!")
@@ -109,11 +109,11 @@ func TestLogdashLoggerInfoOneLog(t *testing.T) {
 }
 
 func TestLogdashShutdownImmediatelly(t *testing.T) {
-	ld := logdash.New(logdash.LogdashConfig{
-		Host:    "http://localhost:8080",
-		APIKey:  "test-api-key",
-		Verbose: true,
-	})
+	ld := logdash.New(
+		logdash.WithHost("http://localhost:8080"),
+		logdash.WithAPIKey("test-api-key"),
+		logdash.WithVerbose(),
+	)
 
 	err := ld.Shutdown(context.Background())
 	assert.NoError(t, err)
@@ -133,11 +133,11 @@ func TestLogdashMetricMetric(t *testing.T) {
 		defer httpServer.Close()
 
 		// WHEN
-		ld := logdash.New(logdash.LogdashConfig{
-			Host:    httpServer.URL,
-			APIKey:  "test-api-key",
-			Verbose: true,
-		})
+		ld := logdash.New(
+			logdash.WithHost(httpServer.URL),
+			logdash.WithAPIKey("test-api-key"),
+			logdash.WithVerbose(),
+		)
 
 		beforeMetricSent := time.Now()
 		ld.Metrics.Set("test-metric", 42)
@@ -185,11 +185,11 @@ func TestLogdashMetricMetric(t *testing.T) {
 			defer httpServer.Close()
 
 			// WHEN
-			ld := logdash.New(logdash.LogdashConfig{
-				Host:    httpServer.URL,
-				APIKey:  "test-api-key",
-				Verbose: true,
-			})
+			ld := logdash.New(
+				logdash.WithHost(httpServer.URL),
+				logdash.WithAPIKey("test-api-key"),
+				logdash.WithVerbose(),
+			)
 
 			beforeMetricSent := time.Now()
 			// first request is always sent immediately in test environment
@@ -249,11 +249,11 @@ func TestLogdashMetricMetric(t *testing.T) {
 			defer httpServer.Close()
 
 			// WHEN
-			ld := logdash.New(logdash.LogdashConfig{
-				Host:    httpServer.URL,
-				APIKey:  "test-api-key",
-				Verbose: true,
-			})
+			ld := logdash.New(
+				logdash.WithHost(httpServer.URL),
+				logdash.WithAPIKey("test-api-key"),
+				logdash.WithVerbose(),
+			)
 
 			beforeMetricSent := time.Now()
 			// first request is always sent immediately in test environment
