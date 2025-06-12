@@ -20,10 +20,10 @@ go get github.com/logdash-io/go-sdk/logdash
 package main
 
 import (
-	"context"
-	"time"
+    "context"
+    "time"
 
-	"github.com/logdash-io/go-sdk/logdash"
+    "github.com/logdash-io/go-sdk/logdash"
 )
 
 func main() {
@@ -61,10 +61,10 @@ func main() {
 package main
 
 import (
-	"context"
-	"time"
+    "context"
+    "time"
 
-	"github.com/logdash-io/go-sdk/logdash"
+    "github.com/logdash-io/go-sdk/logdash"
 )
 
 func main() {
