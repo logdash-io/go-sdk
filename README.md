@@ -26,10 +26,10 @@ import (
 
 func main() {
     // Initialize with your API key
-    ld := logdash.New(logdash.LogdashConfig{
+    ld := logdash.New(
         // optional, but recommended to see your logs in the dashboard
-        APIKey:  "your-api-key", // Replace with your actual API key
-    })
+        logdash.WithApiKey("your-api-key"), // Replace with your actual API key
+    )
 
     // Access the logger
     logger := logdash.logger
@@ -58,8 +58,8 @@ import 	"github.com/logdash-io/go-sdk/logdash"
 func main() {
     // Initialize with your API key
     ld := logdash.New(logdash.LogdashConfig{
-        // optional, but recommended as metrics are only hosted remotely
-        APIKey:  "your-api-key", // Replace with your actual API key
+        // optional, but recommended to see your logs in the dashboard
+        logdash.WithApiKey("your-api-key"), // Replace with your actual API key
     })
 
     // Access metrics

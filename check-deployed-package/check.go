@@ -42,9 +42,9 @@ func main() {
 	}
 
 	// Initialize LogDash
-	ld := logdash.New(logdash.LogdashConfig{
-		APIKey: apiKey,
-	})
+	ld := logdash.New(
+		logdash.WithAPIKey(apiKey),
+	)
 
 	// Get the logger instance
 	logger := ld.Logger
