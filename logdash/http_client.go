@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -26,20 +25,20 @@ func (l *retryLogger) Printf(format string, v ...interface{}) {
 }
 
 // newHTTPClient creates a new HTTP client instance.
-func newHTTPClient(serverURL string, apiKey string, internalLogger *Logger) *httpClient {
+func newHTTPClient(o *options, internalLogger *Logger) *httpClient {
 	retryhttpClient := retryablehttp.NewClient()
 	retryhttpClient.Logger = &retryLogger{
 		internalLogger: internalLogger,
 	}
-	retryhttpClient.RetryMax = 3
-	retryhttpClient.RetryWaitMin = 1 * time.Second
-	retryhttpClient.RetryWaitMax = 30 * time.Second
-	retryhttpClient.HTTPClient.Timeout = 5 * time.Second
+	retryhttpClient.RetryMax = o.httpRetries
+	retryhttpClient.RetryWaitMin = o.httpRetryMin
+	retryhttpClient.RetryWaitMax = o.httpRetryMax
+	retryhttpClient.HTTPClient.Timeout = o.httpTimeout
 
 	return &httpClient{
 		client:    retryhttpClient,
-		serverURL: serverURL,
-		apiKey:    apiKey,
+		serverURL: o.host,
+		apiKey:    o.apiKey,
 	}
 }
 

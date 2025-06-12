@@ -10,11 +10,13 @@ import (
 func main() {
 	// Initialize logdash with your API key
 	// For testing without an API key, logs will only be printed locally
-	ld := logdash.New(logdash.LogdashConfig{
-		Host:    "https://api.logdash.io",
-		APIKey:  "your-api-key", // Replace with your actual API key
-		Verbose: true,           // Enable verbose mode for development
-	})
+	ld := logdash.New(
+		logdash.WithHost("https://api.logdash.io"),
+		logdash.WithAPIKey("your-api-key"),                      // Replace with your actual API key
+		logdash.WithVerbose(),                                   // Enable verbose mode for development
+		logdash.WithBufferSize(256),                             // Set custom buffer size
+		logdash.WithOverflowPolicy(logdash.OverflowPolicyBlock), // Block when buffer is full
+	)
 
 	// Get the logger instance
 	logger := ld.Logger

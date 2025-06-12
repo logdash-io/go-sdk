@@ -25,9 +25,9 @@ type logEntry struct {
 }
 
 // newHTTPLogger creates a new HTTPLogger instance.
-func newHTTPLogger(serverURL string, apiKey string, internalLogger *Logger, bufferSize int) *httpLogger {
+func newHTTPLogger(o *options, internalLogger *Logger, bufferSize int) *httpLogger {
 	logger := &httpLogger{
-		client:         newHTTPClient(serverURL, apiKey, internalLogger),
+		client:         newHTTPClient(o, internalLogger),
 		internalLogger: internalLogger,
 	}
 
