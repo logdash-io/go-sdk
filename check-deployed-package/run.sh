@@ -51,6 +51,10 @@ fi
 echo "Authentication successful. Project ID: $PROJECT_ID"
 
 echo
+echo "Waiting for logs to be available..."
+sleep 3
+
+echo
 echo "Fetching logs from LogDash API..."
 
 # Fetch logs from the API
