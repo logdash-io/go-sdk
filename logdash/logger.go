@@ -10,7 +10,7 @@ import (
 
 // syncLogger defines the internal interface for synchronous logging.
 type syncLogger interface {
-	ResourceManager
+	resourceManager
 	// syncLog logs a message with the given timestamp, level and message.
 	syncLog(timestamp time.Time, level logLevel, message string)
 }
