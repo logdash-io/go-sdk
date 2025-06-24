@@ -68,7 +68,7 @@ func main() {
     // to set absolute value
     metrics.Set("users", 0)
 
-    // to modify existing metric
+    // or increment / decrement by
     metrics.Mutate("users", 1)
 ```
 
