@@ -16,17 +16,19 @@ import (
 // [slog.HandlerOptions] are fully supported.
 //
 // Basic mapping between [slog.Level] and [logdash.logLevel] is:
-// - [slog.LevelDebug] (-4) → [logdash.Debug]
-// - [slog.LevelInfo] (0) → [logdash.Info]
-// - [slog.LevelWarn] (4) → [logdash.Warn]
-// - [slog.LevelError] (8) → [logdash.Error]
+//   - [slog.LevelDebug] (-4) → [logdash.Silly]
+//   - [slog.LevelInfo] (0) → [logdash.Debug]
+//   - [slog.LevelWarn] (4) → [logdash.Info]
+//   - [slog.LevelError] (8) → [logdash.Warn]
 //
 // Since [slog.Level] is an integer type, the mapping handles any intermediate or custom level values:
-// - Levels < [slog.LevelDebug] (-4) → [logdash.Silly]
-// - Levels ≥ [slog.LevelDebug] (-4) and < [slog.LevelInfo] (0) → [logdash.Debug]
-// - Levels ≥ [slog.LevelInfo] (0) and < [slog.LevelWarn] (4) → [logdash.Info]
-// - Levels ≥ [slog.LevelWarn] (4) and < [slog.LevelError] (8) → [logdash.Warn]
-// - Levels ≥ [slog.LevelError] (8) → [logdash.Error]
+//   - Levels < [slog.LevelDebug] (-4) → [logdash.Silly]
+//   - Levels ≥ [slog.LevelDebug] (-4) and < [slog.LevelInfo] (0) → [logdash.Debug]
+//   - Levels ≥ [slog.LevelInfo] (0) and < [slog.LevelWarn] (4) → [logdash.Info]
+//   - Levels ≥ [slog.LevelWarn] (4) and < [slog.LevelError] (8) → [logdash.Warn]
+//   - Levels ≥ [slog.LevelError] (8) → [logdash.Error]
+//
+// If you want to log with a custom level, you can use [slog.Level] directly.
 type SlogTextHandler struct {
 	opts              slog.HandlerOptions
 	preformattedAttrs []string // contains all attrs that are already formatted

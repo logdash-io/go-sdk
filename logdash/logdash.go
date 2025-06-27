@@ -140,10 +140,10 @@ func WithHTTPRetryMax(max time.Duration) Option {
 // For preserving logs in case of overflow, use [WithOverflowPolicy] to set [OverflowPolicyBlock].
 //
 // The default HTTP settings are:
-// - timeout: 5 seconds (see: [WithHTTPTimeout]).
-// - retries: 3 (see: [WithHTTPRetries]).
-// - retry minimum interval: 1 second (see: [WithHTTPRetryMin]).
-// - retry maximum interval: 30 seconds (see: [WithHTTPRetryMax]).
+//   - timeout: 5 seconds (see: [WithHTTPTimeout]).
+//   - retries: 3 (see: [WithHTTPRetries]).
+//   - retry minimum interval: 1 second (see: [WithHTTPRetryMin]).
+//   - retry maximum interval: 30 seconds (see: [WithHTTPRetryMax]).
 func New(opts ...Option) *Logdash {
 	o := &options{
 		host:           "https://api.logdash.io",
