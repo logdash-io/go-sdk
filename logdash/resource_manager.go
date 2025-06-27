@@ -6,7 +6,7 @@ import (
 )
 
 type (
-	ResourceManager interface {
+	resourceManager interface {
 		Shutdown(ctx context.Context) error
 		Close() error
 	}

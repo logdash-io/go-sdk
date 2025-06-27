@@ -4,7 +4,7 @@ package logdash
 //
 // This is created internally as a part of the [Logdash] object and accessed via the [Logdash.Metrics] field.
 type Metrics interface {
-	ResourceManager
+	resourceManager
 
 	// Set sets a metric to an absolute value.
 	Set(name string, value float64)
