@@ -16,10 +16,10 @@ import (
 // [slog.HandlerOptions] are fully supported.
 //
 // Basic mapping between [slog.Level] and [logdash.logLevel] is:
-//   - [slog.LevelDebug] (-4) → [logdash.Silly]
-//   - [slog.LevelInfo] (0) → [logdash.Debug]
-//   - [slog.LevelWarn] (4) → [logdash.Info]
-//   - [slog.LevelError] (8) → [logdash.Warn]
+//   - [slog.LevelDebug] (-4) → [logdash.Debug]
+//   - [slog.LevelInfo] (0) → [logdash.Info]
+//   - [slog.LevelWarn] (4) → [logdash.Warn]
+//   - [slog.LevelError] (8) → [logdash.Error]
 //
 // Since [slog.Level] is an integer type, the mapping handles any intermediate or custom level values:
 //   - Levels < [slog.LevelDebug] (-4) → [logdash.Silly]
