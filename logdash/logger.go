@@ -119,6 +119,13 @@ func (l *Logger) log(level logLevel, args ...any) {
 	}
 }
 
+func (l *Logger) logWithAttrs(timestamp time.Time, level logLevel, attrs []string) {
+	message := strings.Join(attrs, " ")
+	for _, logger := range l.loggers {
+		logger.syncLog(timestamp, level, message)
+	}
+}
+
 // formatMessage formats the log message arguments into a single string.
 func formatMessage(args ...any) string {
 	strArgs := make([]string, len(args))
