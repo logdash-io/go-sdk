@@ -11,8 +11,22 @@ import (
 
 // SlogTextHandler is a [slog.Handler] that logs to Logdash.
 //
-// This handler is fully compatible with [slog.HandlerOptions] and [slog.Handler].
 // It mimics [slog.TextHandler] behavior, but logs to Logdash instead of [io.Writer].
+//
+// [slog.HandlerOptions] are fully supported.
+//
+// Basic mapping between [slog.Level] and [logdash.logLevel] is:
+// - [slog.LevelDebug] (-4) → [logdash.Debug]
+// - [slog.LevelInfo] (0) → [logdash.Info]
+// - [slog.LevelWarn] (4) → [logdash.Warn]
+// - [slog.LevelError] (8) → [logdash.Error]
+//
+// Since [slog.Level] is an integer type, the mapping handles any intermediate or custom level values:
+// - Levels < [slog.LevelDebug] (-4) → [logdash.Silly]
+// - Levels ≥ [slog.LevelDebug] (-4) and < [slog.LevelInfo] (0) → [logdash.Debug]
+// - Levels ≥ [slog.LevelInfo] (0) and < [slog.LevelWarn] (4) → [logdash.Info]
+// - Levels ≥ [slog.LevelWarn] (4) and < [slog.LevelError] (8) → [logdash.Warn]
+// - Levels ≥ [slog.LevelError] (8) → [logdash.Error]
 type SlogTextHandler struct {
 	opts              slog.HandlerOptions
 	preformattedAttrs []string // contains all attrs that are already formatted
