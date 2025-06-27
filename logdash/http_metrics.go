@@ -138,10 +138,11 @@ LOOP:
 			}
 			// accumulate metric
 			accumulatedEntry.Timestamp = entry.Timestamp
-			if entry.Operation == metricOperationSet {
+			switch entry.Operation {
+			case metricOperationSet:
 				accumulatedEntry.Value = entry.Value
 				accumulatedEntry.Operation = metricOperationSet
-			} else if entry.Operation == metricOperationMutate {
+			case metricOperationMutate:
 				accumulatedEntry.Value += entry.Value
 			}
 			// enable sending accumulated metric

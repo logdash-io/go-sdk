@@ -10,7 +10,7 @@ import (
 
 // syncLogger defines the internal interface for synchronous logging.
 type syncLogger interface {
-	ResourceManager
+	resourceManager
 	// syncLog logs a message with the given timestamp, level and message.
 	syncLog(timestamp time.Time, level logLevel, message string)
 }
@@ -114,6 +114,13 @@ func (l *Logger) log(level logLevel, args ...any) {
 	timestamp := time.Now()
 	message := formatMessage(args...)
 
+	for _, logger := range l.loggers {
+		logger.syncLog(timestamp, level, message)
+	}
+}
+
+func (l *Logger) logWithAttrs(timestamp time.Time, level logLevel, attrs []string) {
+	message := strings.Join(attrs, " ")
 	for _, logger := range l.loggers {
 		logger.syncLog(timestamp, level, message)
 	}
