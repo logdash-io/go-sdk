@@ -17,11 +17,13 @@ go get github.com/logdash-io/go-sdk/logdash
 ## Logging
 
 ```go
-import (
-	"context"
-	"time"
+package main
 
-	"github.com/logdash-io/go-sdk/logdash"
+import (
+    "context"
+    "time"
+
+    "github.com/logdash-io/go-sdk/logdash"
 )
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
     )
 
     // Access the logger
-    logger := logdash.logger
+    logger := ld.Logger
 
     logger.Info("Application started successfully")
     logger.Error("An unexpected error occurred")
@@ -40,13 +42,16 @@ func main() {
 
     // Go specific: all logging methods has ...F() counterpart
     // like fmt.PrinttF for fmt.Print
-    logger.InfoF("Processing %v of %v item", i, items)
+    const items = 10
+    for i := range items {
+        logger.InfoF("Processing %v of %v item", i+1, items)
+    }
 
-    // Go specific: Shutdown method wait for flushing 
+    // Go specific: Shutdown method wait for flushing
     // all enqueued logs and metrics before closing application
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	ld.Shutdown(ctx)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+    ld.Shutdown(ctx)
 }
 ```
 
@@ -123,7 +128,14 @@ This ensures that any custom slog levels or intermediate values are properly cat
 ## Metrics
 
 ```go
-import 	"github.com/logdash-io/go-sdk/logdash"
+package main
+
+import (
+    "context"
+    "time"
+
+    "github.com/logdash-io/go-sdk/logdash"
+)
 
 func main() {
     // Initialize with your API key
@@ -133,13 +145,19 @@ func main() {
     })
 
     // Access metrics
-    metrics := logdash.Metrics
+    metrics := ld.Metrics
 
     // to set absolute value
     metrics.Set("users", 0)
 
     // or increment / decrement by
     metrics.Mutate("users", 1)
+
+    // Go specific: Shutdown method wait for flushing
+    // all enqueued logs and metrics before closing application
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+    ld.Shutdown(ctx)
 }
 ```
 
