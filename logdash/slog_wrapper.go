@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+// SlogTextHandler is a [slog.Handler] that logs to Logdash.
+//
+// This handler is fully compatible with [slog.HandlerOptions] and [slog.Handler].
+// It mimics [slog.TextHandler] behavior, but logs to Logdash instead of [io.Writer].
 type SlogTextHandler struct {
 	opts              slog.HandlerOptions
 	preformattedAttrs []string // contains all attrs that are already formatted
@@ -17,6 +21,7 @@ type SlogTextHandler struct {
 	logger            *Logger
 }
 
+// NewSlogTextHandler creates a new [SlogTextHandler] with the given [Logger] and [slog.HandlerOptions].
 func NewSlogTextHandler(logger *Logger, opts slog.HandlerOptions) *SlogTextHandler {
 	return &SlogTextHandler{opts: opts, logger: logger}
 }
