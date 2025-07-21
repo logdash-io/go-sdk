@@ -55,7 +55,7 @@ func (l *httpLogger) syncLog(timestamp time.Time, level logLevel, message string
 		CreatedAt:      timestamp.UTC().Format(time.RFC3339Nano),
 		Level:          string(level),
 		Message:        message,
-		SequenceNumber: l.sequenceNumber.Add(1),
+		SequenceNumber: l.sequenceNumber.Add(1) % (1 << 32),
 	}
 
 	l.processor.send(entry)
