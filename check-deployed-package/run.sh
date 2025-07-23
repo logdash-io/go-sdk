@@ -59,7 +59,7 @@ echo "Fetching logs from LogDash API..."
 
 # Fetch logs from the API
 LOGS_RESPONSE=$(curl -s -X 'GET' \
-  "https://api.logdash.io/projects/${PROJECT_ID}/logs?limit=10" \
+  "https://api.logdash.io/projects/${PROJECT_ID}/logs/v2?limit=10" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}")
 
