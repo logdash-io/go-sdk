@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # A release in progress must finish; a newer merge waits and releases after it.
@@ -59,9 +62,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - run: gh release create "v$V" --generate-notes --target "$GITHUB_SHA"
+      # Each step skips what a previous run already did, so a rerun after a failure finishes the release.
+      - run: gh release view "v$V" >/dev/null 2>&1 || gh release create "v$V" --generate-notes --target "$GITHUB_SHA"
       # The module lives in logdash/, so Go reads its versions from logdash/v* tags; a major above 1 also needs a /vN module path.
-      - run: gh api "repos/$GH_REPO/git/refs" -f ref="refs/tags/logdash/v$V" -f sha="$GITHUB_SHA"
+      - run: gh api "repos/$GH_REPO/git/ref/tags/logdash/v$V" >/dev/null 2>&1 || gh api "repos/$GH_REPO/git/refs" -f ref="refs/tags/logdash/v$V" -f sha="$GITHUB_SHA"
       - uses: actions/setup-go@v7
         with:
           go-version: stable
@@ -74,4 +78,6 @@ jobs:
     uses: ./.github/workflows/check-deployed-package.yml
     with:
       version: v${{ needs.version.outputs.next }}
-    secrets: inherit
+    secrets:
+      LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
+      LOGDASH_PERSONAL_API_KEY: ${{ secrets.LOGDASH_PERSONAL_API_KEY }}

@@ -7,7 +7,15 @@ on:
       version:
         type: string
         required: true
+    secrets:
+      LOGDASH_API_KEY:
+        required: true
+      LOGDASH_PERSONAL_API_KEY:
+        required: true
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   run-demo:
