@@ -48,7 +48,7 @@ func main() {
     }
 
     // Go specific: Shutdown method wait for flushing
-    // all enqueued logs and metrics before closing application
+    // all enqueued logs, metrics and events before closing application
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
     ld.Shutdown(ctx)
@@ -154,12 +154,31 @@ func main() {
     metrics.Mutate("users", 1)
 
     // Go specific: Shutdown method wait for flushing
-    // all enqueued logs and metrics before closing application
+    // all enqueued logs, metrics and events before closing application
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
     ld.Shutdown(ctx)
 }
 ```
+
+## Events
+
+```go
+ld := logdash.New(
+    logdash.WithAPIKey("your-api-key"),
+)
+
+ld.Track("agent_run",
+    map[string]any{"agent": "support", "steps": 4, "success": true},
+    // the signed-in user's internal ID, never an email address
+    logdash.WithUserID("42"),
+)
+```
+
+Events show up in the domain's Analytics as goals, with a daily trend.
+Pass the user ID for signed-in users, so one person counts once across the website and apps.
+Without it, Logdash counts a visitor of that app that changes every day.
+Never put personal data in props.
 
 ## Apps
 

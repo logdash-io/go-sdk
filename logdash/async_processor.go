@@ -49,6 +49,11 @@ func (p *asyncProcessor[T]) process(ch chan T) {
 func (p *asyncProcessor[T]) send(item T) {
 	p.processChanMu.RLock()
 	defer p.processChanMu.RUnlock()
+	// after Close, sending to the nil channel would block forever
+	if p.processChan == nil {
+		p.errorHandler(item, ErrAlreadyClosed)
+		return
+	}
 	select {
 	case p.processChan <- item:
 		// Item sent to channel
@@ -84,11 +89,9 @@ func (p *asyncProcessor[T]) safeClear() error {
 
 // Shutdown stops the background worker after items in the channel are processed.
 func (p *asyncProcessor[T]) Shutdown(ctx context.Context) error {
-	p.processChanMu.Lock()
-	if err := p.safeClear(); err != nil {
+	if err := p.Close(); err != nil {
 		return err
 	}
-	p.processChanMu.Unlock()
 
 	select {
 	case <-ctx.Done():

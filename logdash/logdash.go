@@ -21,6 +21,9 @@ type (
 		// If no API key is provided, the Logdash will not send any metrics to the server.
 		Metrics Metrics
 
+		// events sends the events of [Logdash.Track] to the server, nil without an API key.
+		events *asyncProcessor[eventEntry]
+
 		// internalLogger is the logger used to log messages to the console.
 		internalLogger *Logger
 	}
@@ -42,19 +45,19 @@ type (
 		httpRetryMax   time.Duration
 	}
 
-	// OverflowPolicy defines how to handle log overflow.
+	// OverflowPolicy defines how to handle log and event overflow.
 	OverflowPolicy int
 )
 
 const (
-	// OverflowPolicyDrop drops new logs when the internal buffer is full.
+	// OverflowPolicyDrop drops new logs and events when the internal buffer is full.
 	//
 	// This is the default behavior.
 	OverflowPolicyDrop OverflowPolicy = iota
 
 	// OverflowPolicyBlock blocks when the internal buffer is full.
 	//
-	// This is useful when you want to preserve logs even when the internal buffer is full.
+	// This is useful when you want to preserve logs and events even when the internal buffer is full.
 	OverflowPolicyBlock
 )
 
@@ -77,7 +80,7 @@ func WithAPIKey(apiKey string) Option {
 	}
 }
 
-// WithApp sets the name of the app that sends the logs and metrics, for example "api" or "desktop".
+// WithApp sets the name of the app that sends the logs, metrics and events, for example "api" or "desktop".
 //
 // All apps of a domain share one domain key, and the app name tells them apart in the dashboard.
 // Older service keys ignore it.
@@ -103,7 +106,7 @@ func WithBufferSize(size int) Option {
 	}
 }
 
-// WithOverflowPolicy sets how to handle log overflow.
+// WithOverflowPolicy sets how to handle log and event overflow.
 func WithOverflowPolicy(policy OverflowPolicy) Option {
 	return func(o *options) {
 		o.overflowPolicy = policy
@@ -142,7 +145,7 @@ func WithHTTPRetryMax(max time.Duration) Option {
 //
 // By default, the Logdash will use the Logdash API at https://api.logdash.io.
 //
-// If no API key is provided, the Logdash will not send any logs or metrics to the server.
+// If no API key is provided, the Logdash will not send any logs, metrics or events to the server.
 // Logging to the console is always enabled.
 //
 // The default buffer size is 128 (see: [DefaultBufferSize]).
@@ -160,6 +163,10 @@ func New(opts ...Option) *Logdash {
 		host:           "https://api.logdash.io",
 		bufferSize:     DefaultBufferSize,
 		overflowPolicy: OverflowPolicyDrop,
+		httpTimeout:    5 * time.Second,
+		httpRetries:    3,
+		httpRetryMin:   1 * time.Second,
+		httpRetryMax:   30 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -175,6 +182,7 @@ func (ld *Logdash) setup(o *options) {
 	ld.setupInternalLogger(o)
 	ld.setupLogger(o)
 	ld.setupMetrics(o)
+	ld.setupEvents(o)
 }
 
 func (ld *Logdash) setupInternalLogger(o *options) {
@@ -215,6 +223,7 @@ func (ld *Logdash) setupMetrics(o *options) {
 	ld.Metrics = newVerboseLogMetricsWrapper(ld.internalLogger, innerMetrics)
 }
 
+// Shutdown stops accepting logs, metrics and events, and waits until the queued ones are sent or ctx is done.
 func (ld *Logdash) Shutdown(ctx context.Context) error {
 	errg, _ := errgroup.WithContext(ctx)
 	errg.Go(func() error {
@@ -223,12 +232,21 @@ func (ld *Logdash) Shutdown(ctx context.Context) error {
 	errg.Go(func() error {
 		return ld.Metrics.Shutdown(ctx)
 	})
+	if ld.events != nil {
+		errg.Go(func() error {
+			return ld.events.Shutdown(ctx)
+		})
+	}
 	return errg.Wait()
 }
 
+// Close stops accepting logs, metrics and events, without waiting for the queued ones to be sent.
 func (ld *Logdash) Close() error {
 	errg, _ := errgroup.WithContext(context.Background())
 	errg.Go(ld.Logger.Close)
 	errg.Go(ld.Metrics.Close)
+	if ld.events != nil {
+		errg.Go(ld.events.Close)
+	}
 	return errg.Wait()
 }
