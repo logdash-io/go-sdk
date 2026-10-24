@@ -32,6 +32,7 @@ type (
 	options struct {
 		host           string
 		apiKey         string
+		app            string
 		verbose        bool
 		bufferSize     int
 		overflowPolicy OverflowPolicy
@@ -73,6 +74,16 @@ func WithHost(host string) Option {
 func WithAPIKey(apiKey string) Option {
 	return func(o *options) {
 		o.apiKey = apiKey
+	}
+}
+
+// WithApp sets the name of the app that sends the logs and metrics, for example "api" or "desktop".
+//
+// All apps of a domain share one domain key, and the app name tells them apart in the dashboard.
+// Older service keys ignore it.
+func WithApp(app string) Option {
+	return func(o *options) {
+		o.app = app
 	}
 }
 
