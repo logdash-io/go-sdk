@@ -1,0 +1,26 @@
+name: Check deployed package
+
+# CI runs it after each release, against the version just released; by hand it checks the commit it runs on.
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+  workflow_dispatch:
+
+jobs:
+  run-demo:
+    name: Run LogDash Go Demo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run LogDash Go demo
+        env:
+          LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
+          LOGDASH_PERSONAL_API_KEY: ${{ secrets.LOGDASH_PERSONAL_API_KEY }}
+          LOGDASH_VERSION: ${{ inputs.version || github.sha }}
+        run: ./check-deployed-package/run.sh
