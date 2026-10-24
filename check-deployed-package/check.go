@@ -30,7 +30,6 @@ func main() {
 		metricsSeedStr = "1"
 	}
 
-	fmt.Printf("Using API Key: %s\n", apiKey)
 	fmt.Printf("Using Logs Seed: %s\n", logsSeed)
 	fmt.Printf("Using Metrics Seed: %s\n", metricsSeedStr)
 
@@ -44,6 +43,7 @@ func main() {
 	// Initialize LogDash
 	ld := logdash.New(
 		logdash.WithAPIKey(apiKey),
+		logdash.WithApp("go-sdk"),
 	)
 
 	// Get the logger instance
