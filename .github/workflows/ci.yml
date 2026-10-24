@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A release in progress must finish; a newer merge waits and releases after it.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: logdash/go.mod
+          cache-dependency-path: logdash/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: go vet ./...
+        working-directory: logdash
+      - run: go test ./...
+        working-directory: logdash
+      - run: node --test 'scripts/*.test.ts'
+
+  # The version the merged commits call for; empty when none of them is a feat, fix, perf, or breaking change.
+  version:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      next: ${{ steps.next.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the tags and commits since the last release
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Two lines, so a failing script fails the job instead of releasing nothing.
+      - id: next
+        run: |
+          version=$(node scripts/version.ts)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # Go releases are tags: `go get` fetches the tagged commit through the module proxy.
+  release:
+    needs: [test, version]
+    if: needs.version.outputs.next != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      V: ${{ needs.version.outputs.next }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # Each step skips what a previous run already did, so a rerun after a failure finishes the release.
+      - run: gh release view "v$V" >/dev/null 2>&1 || gh release create "v$V" --generate-notes --target "$GITHUB_SHA"
+      # The module lives in logdash/, so Go reads its versions from logdash/v* tags; a major above 1 also needs a /vN module path.
+      - run: gh api "repos/$GH_REPO/git/ref/tags/logdash/v$V" >/dev/null 2>&1 || gh api "repos/$GH_REPO/git/refs" -f ref="refs/tags/logdash/v$V" -f sha="$GITHUB_SHA"
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
+      - run: GOPROXY=https://proxy.golang.org go list -m "github.com/logdash-io/go-sdk/logdash@v$V"
+
+  # Fetches the version just released the way users get it and reads back what it sends.
+  smoke:
+    needs: [version, release]
+    uses: ./.github/workflows/check-deployed-package.yml
+    with:
+      version: v${{ needs.version.outputs.next }}
+    secrets:
+      LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
+      LOGDASH_PERSONAL_API_KEY: ${{ secrets.LOGDASH_PERSONAL_API_KEY }}

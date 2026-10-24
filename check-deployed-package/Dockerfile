@@ -3,18 +3,14 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# Copy go.mod and go.sum files
-COPY check-deployed-package/go.mod ./
-COPY check-deployed-package/go.sum* ./
+# Copy go.mod and source code
+COPY check-deployed-package/go.mod check-deployed-package/check.go ./
 
-# Copy the entire logdash SDK source code
-COPY logdash/ /go/src/github.com/logdash-io/go-sdk/logdash/
+# The version to check, the latest when empty: a release such as v0.1.0, or a commit
+ARG LOGDASH_VERSION
 
-# Copy source code
-COPY check-deployed-package/check.go ./
-
-# Tidy modules to resolve all dependencies including transitive ones
-RUN go mod tidy
+# Fetch the SDK through the Go module proxy, the way users get it
+RUN go get "github.com/logdash-io/go-sdk/logdash@${LOGDASH_VERSION:-latest}"
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o check ./check.go

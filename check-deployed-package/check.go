@@ -30,7 +30,6 @@ func main() {
 		metricsSeedStr = "1"
 	}
 
-	fmt.Printf("Using API Key: %s\n", apiKey)
 	fmt.Printf("Using Logs Seed: %s\n", logsSeed)
 	fmt.Printf("Using Metrics Seed: %s\n", metricsSeedStr)
 
@@ -38,12 +37,13 @@ func main() {
 	metricsSeed, err := strconv.ParseFloat(metricsSeedStr, 64)
 	if err != nil {
 		fmt.Printf("Error parsing metrics seed: %v\n", err)
-		return
+		os.Exit(1)
 	}
 
 	// Initialize LogDash
 	ld := logdash.New(
 		logdash.WithAPIKey(apiKey),
+		logdash.WithApp("go-sdk"),
 	)
 
 	// Get the logger instance
@@ -69,5 +69,8 @@ func main() {
 	// Shutdown properly, wait to ensure data is sent
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	ld.Shutdown(ctx)
+	if err := ld.Shutdown(ctx); err != nil {
+		fmt.Printf("Error shutting down: %v\n", err)
+		os.Exit(1)
+	}
 }
