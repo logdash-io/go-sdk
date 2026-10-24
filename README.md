@@ -30,7 +30,7 @@ func main() {
     // Initialize with your API key
     ld := logdash.New(
         // optional, but recommended to see your logs in the dashboard
-        logdash.WithApiKey("your-api-key"), // Replace with your actual API key
+        logdash.WithAPIKey("your-api-key"), // Replace with your actual API key
     )
 
     // Access the logger
@@ -70,7 +70,7 @@ import (
 func main() {
 	// Create a new Logdash instance
 	ld := logdash.New(
-		logdash.WithApiKey("your-api-key"),
+		logdash.WithAPIKey("your-api-key"),
 	)
 
 	// Create a slog.Handler that wraps the Logdash logger
@@ -139,10 +139,10 @@ import (
 
 func main() {
     // Initialize with your API key
-    ld := logdash.New(logdash.LogdashConfig{
+    ld := logdash.New(
         // optional, but recommended to see your logs in the dashboard
-        logdash.WithApiKey("your-api-key"), // Replace with your actual API key
-    })
+        logdash.WithAPIKey("your-api-key"), // Replace with your actual API key
+    )
 
     // Access metrics
     metrics := ld.Metrics
@@ -160,6 +160,21 @@ func main() {
     ld.Shutdown(ctx)
 }
 ```
+
+## Apps
+
+All apps of a domain, for example a desktop app, an API and a landing page, share one domain key.
+`WithApp` names this app, so the dashboard can filter its logs and metrics by app.
+The app is created the first time it sends data.
+
+```go
+ld := logdash.New(
+    logdash.WithAPIKey("your-domain-key"),
+    logdash.WithApp("api"),
+)
+```
+
+Older service keys ignore `app`.
 
 ## View
 

@@ -12,6 +12,7 @@ import (
 type httpLogger struct {
 	client         *httpClient
 	internalLogger *Logger
+	app            string
 	sequenceNumber atomic.Int64
 	processor      *asyncProcessor[logEntry]
 }
@@ -22,6 +23,7 @@ type logEntry struct {
 	Level          string `json:"level"`
 	Message        string `json:"message"`
 	SequenceNumber int64  `json:"sequenceNumber"`
+	App            string `json:"app,omitempty"`
 }
 
 // newHTTPLogger creates a new HTTPLogger instance.
@@ -29,6 +31,7 @@ func newHTTPLogger(o *options, internalLogger *Logger, bufferSize int) *httpLogg
 	logger := &httpLogger{
 		client:         newHTTPClient(o, internalLogger),
 		internalLogger: internalLogger,
+		app:            o.app,
 	}
 
 	// Create async processor for logs
@@ -56,6 +59,7 @@ func (l *httpLogger) syncLog(timestamp time.Time, level logLevel, message string
 		Level:          string(level),
 		Message:        message,
 		SequenceNumber: l.sequenceNumber.Add(1) % (1 << 32),
+		App:            l.app,
 	}
 
 	l.processor.send(entry)

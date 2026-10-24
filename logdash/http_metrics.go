@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"sync"
-	"time"
 )
 
 type (
@@ -12,6 +11,7 @@ type (
 	httpMetrics struct {
 		client         *httpClient
 		internalLogger *Logger
+		app            string
 
 		// send accumulated metrics to goroutine which sends them to the server
 		sendingAccumulatedChan chan metricEntry
@@ -31,10 +31,10 @@ type (
 
 	// metricEntry represents a single metric entry to be sent to the server.
 	metricEntry struct {
-		Timestamp string  `json:"timestamp"`
 		Name      string  `json:"name"`
 		Value     float64 `json:"value"`
 		Operation string  `json:"operation"`
+		App       string  `json:"app,omitempty"`
 	}
 )
 
@@ -48,6 +48,7 @@ func newHTTPMetrics(o *options, internalLogger *Logger) *httpMetrics {
 	metrics := &httpMetrics{
 		client:                 newHTTPClient(o, internalLogger),
 		internalLogger:         internalLogger,
+		app:                    o.app,
 		sendingAccumulatedChan: make(chan metricEntry),
 		stoppedChan:            make(chan struct{}),
 		dispatchChan:           make(chan metricEntry),
@@ -91,6 +92,7 @@ func (m *httpMetrics) sendingLoop() {
 	defer m.sendingLoopWg.Done()
 
 	for entry := range m.sendingAccumulatedChan {
+		entry.App = m.app
 		if err := m.client.sendData("/metrics", http.MethodPut, entry); err != nil {
 			m.internalLogger.ErrorF("Failed to send metric: %v", err)
 		}
@@ -137,7 +139,6 @@ LOOP:
 				}
 			}
 			// accumulate metric
-			accumulatedEntry.Timestamp = entry.Timestamp
 			switch entry.Operation {
 			case metricOperationSet:
 				accumulatedEntry.Value = entry.Value
@@ -165,7 +166,6 @@ LOOP:
 
 func (m *httpMetrics) sendOperation(name string, value float64, operation string) {
 	entry := metricEntry{
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 		Name:      name,
 		Value:     value,
 		Operation: operation,
