@@ -43,7 +43,11 @@ func NewSlogTextHandler(logger *Logger, opts slog.HandlerOptions) *SlogTextHandl
 }
 
 func (h *SlogTextHandler) Enabled(ctx context.Context, level slog.Level) bool {
-	return h.opts.Level.Level() <= level.Level()
+	minLevel := slog.LevelInfo // the default of slog.HandlerOptions
+	if h.opts.Level != nil {
+		minLevel = h.opts.Level.Level()
+	}
+	return level >= minLevel
 }
 
 func (h *SlogTextHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -53,22 +57,14 @@ func (h *SlogTextHandler) Handle(ctx context.Context, r slog.Record) error {
 	attrs[0] = fmt.Sprintf("%q", r.Message)
 	copy(attrs[1:], h.preformattedAttrs)
 	r.Attrs(func(a slog.Attr) bool {
-		a = h.safeReplaceAttr(h.groups, a)
-		if a.Equal(slog.Attr{}) {
-			return true
-		}
-		attrs = append(attrs, h.decorateAttr(a, h.groupPrefix))
+		attrs = h.appendAttr(attrs, h.groups, h.groupPrefix, a)
 		return true
 	})
 	// add source
 	if h.opts.AddSource && r.PC != 0 {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
-		a := slog.String(slog.SourceKey, fmt.Sprintf("%s:%d", f.File, f.Line))
-		a = h.safeReplaceAttr(h.groups, a)
-		if !a.Equal(slog.Attr{}) {
-			attrs = append(attrs, h.decorateAttr(a, h.groupPrefix))
-		}
+		attrs = h.appendAttr(attrs, h.groups, h.groupPrefix, slog.String(slog.SourceKey, fmt.Sprintf("%s:%d", f.File, f.Line)))
 	}
 
 	// time is not added as text, because we put it into logdash logger as time.Time
@@ -85,11 +81,7 @@ func (h *SlogTextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	pre := make([]string, len(h.preformattedAttrs), len(h.preformattedAttrs)+len(attrs))
 	copy(pre, h.preformattedAttrs)
 	for _, a := range attrs {
-		a = h.safeReplaceAttr(h.groups, a)
-		if a.Equal(slog.Attr{}) {
-			continue
-		}
-		pre = append(pre, h.decorateAttr(a, h2.groupPrefix))
+		pre = h.appendAttr(pre, h.groups, h.groupPrefix, a)
 	}
 	h2.preformattedAttrs = pre
 	return &h2
@@ -108,30 +100,37 @@ func (h *SlogTextHandler) WithGroup(name string) slog.Handler {
 	return &h2
 }
 
-func (h *SlogTextHandler) decorateAttr(a slog.Attr, groupPrefix string) string {
+// appendAttr appends a to dst as key=value, and each attr of a group as group.key=value.
+//
+// Like [slog.TextHandler], it rewrites every non-group attr with ReplaceAttr,
+// inlines a group with an empty key, and leaves out empty attrs and groups.
+func (h *SlogTextHandler) appendAttr(dst []string, groups []string, groupPrefix string, a slog.Attr) []string {
 	a.Value = a.Value.Resolve()
-	switch a.Value.Kind() {
-	case slog.KindString:
-		return fmt.Sprintf("%s%s=%q", groupPrefix, a.Key, a.Value.String())
-	case slog.KindTime:
-		return fmt.Sprintf("%s%s=%s", groupPrefix, a.Key, a.Value.Time().Format(time.RFC3339Nano))
-	case slog.KindGroup:
-		attrs := a.Value.Group()
-		groupPrefix = fmt.Sprintf("%s%s.", groupPrefix, a.Key)
-		for _, attr := range attrs {
-			h.decorateAttr(attr, groupPrefix)
-		}
-	default:
-		return fmt.Sprintf("%s%s=%s", groupPrefix, a.Key, a.Value)
+	if h.opts.ReplaceAttr != nil && a.Value.Kind() != slog.KindGroup {
+		a = h.opts.ReplaceAttr(groups, a)
+		a.Value = a.Value.Resolve()
 	}
-	panic("unreachable")
-}
+	if a.Equal(slog.Attr{}) {
+		return dst
+	}
 
-func (h *SlogTextHandler) safeReplaceAttr(groups []string, a slog.Attr) slog.Attr {
-	if h.opts.ReplaceAttr == nil {
-		return a
+	switch a.Value.Kind() {
+	case slog.KindGroup:
+		if a.Key != "" {
+			groups = append(slices.Clip(groups), a.Key)
+			groupPrefix = fmt.Sprintf("%s%s.", groupPrefix, a.Key)
+		}
+		for _, attr := range a.Value.Group() {
+			dst = h.appendAttr(dst, groups, groupPrefix, attr)
+		}
+		return dst
+	case slog.KindString:
+		return append(dst, fmt.Sprintf("%s%s=%q", groupPrefix, a.Key, a.Value.String()))
+	case slog.KindTime:
+		return append(dst, fmt.Sprintf("%s%s=%s", groupPrefix, a.Key, a.Value.Time().Format(time.RFC3339Nano)))
+	default:
+		return append(dst, fmt.Sprintf("%s%s=%s", groupPrefix, a.Key, a.Value))
 	}
-	return h.opts.ReplaceAttr(groups, a)
 }
 
 // convertSlogLevel converts slog.Level to logdash.logLevel
